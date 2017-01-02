@@ -6,31 +6,12 @@
 /*   By: hazzout <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/12/29 10:23:53 by hazzout           #+#    #+#             */
-/*   Updated: 2016/12/31 05:31:59 by hazzout          ###   ########.fr       */
+/*   Updated: 2017/01/02 18:37:09 by hazzout          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "./libft/includes/libft.h"
 #include "get_next_line.h"
-
-int         get_next_buff(const int fd, char *buff)
-{
-	int ret;
-
-	ret = read(fd, buff, BUFF_SIZE);
-	buff[ret] = '\0';
-	return (ret);
-}
-
-char        *line_sub_buff(char *buff, int pos)
-{
-	char    *ret;
-	int     len;
-
-	len  = ft_strlen(buff);
-	ret = ft_strsub(buff, pos + 1 , len - pos + 1);
-	return (ret);
-}
 
 char        *line_join_buff(char *line, char *buff)
 {
@@ -65,6 +46,7 @@ t_fd_buff	*get_curr_buff(int fd, t_fd_buff **fd_buff)
 	t_fd_buff *tmp;
 
 	curr_fd_buff = *fd_buff;
+	tmp = NULL;
 	while (curr_fd_buff)
 	{
 		if ((curr_fd_buff)->fd == fd)
@@ -83,38 +65,76 @@ t_fd_buff	*get_curr_buff(int fd, t_fd_buff **fd_buff)
 		if (tmp)
 			tmp->next = new_fd_buff;
 		if (lstnbrelems(fd_buff) == 0)
-		   *fd_buff	= new_fd_buff;
-	} 
+			*fd_buff = new_fd_buff;
+	}	
 	return (*fd_buff);
+}
+
+int			read_file(t_fd_buff *curr_fd_buff, char **line)
+{	
+	char *buff;
+	int ret;
+	int pos;
+
+	buff = ft_strnew(BUFF_SIZE);
+	ret = read(curr_fd_buff->fd, buff, BUFF_SIZE);
+	if (ret == -1 || ret == 0)
+		return (ret);
+	buff[ret] = '\0';
+	while ((pos = ft_strichr(buff, 10)) == -1 && ret != -1)
+	{
+		curr_fd_buff->line = line_join_buff(curr_fd_buff->line, buff);
+		ret = read(curr_fd_buff->fd, buff, BUFF_SIZE);
+		if (ret == -1)
+			return (ret);
+		buff[ret] = '\0';
+		pos = (ret == 0) ? 0 : pos;
+	}
+	curr_fd_buff->line = line_join_buff(curr_fd_buff->line, ft_strsub(buff, 0, pos));
+	*line = ft_strdup(curr_fd_buff->line);
+	free(curr_fd_buff->line);
+	curr_fd_buff->line = ft_strsub(buff, pos + 1, ret - pos + 1);
+	ft_strdel(&buff);
+	return (1);
+}
+
+int			read_fd_buff(t_fd_buff *curr_fd_buff, char **line)
+{
+	int		pos;
+	int		len;
+	char	*tmp;
+
+	pos = -1;
+	len = 0;
+	if ((pos = ft_strichr(curr_fd_buff->line, 10)) != -1)
+	{
+		*line = ft_strsub(curr_fd_buff->line, 0, pos);
+		tmp = curr_fd_buff->line;
+		len = ft_strlen(tmp);
+		curr_fd_buff->line = ft_strsub(curr_fd_buff->line, pos + 1, len - pos);
+		free(tmp);		
+		return (1);
+	}
+	return (pos);
 }
 
 int			get_next_line(const int fd, char **line)
 {
 	static t_fd_buff	*fd_buff;
 	t_fd_buff			*curr_buff;
-	char				*buff;
 	int					pos;
 	int					ret;
 
 	curr_buff = get_curr_buff(fd, &fd_buff);
-	buff = ft_strnew(BUFF_SIZE);
-	ret = get_next_buff(fd, buff);
+	ret = read_fd_buff(curr_buff, line);
+	ft_putstr(*line);
+	ft_putstr("\n");
+	if (ret == 1)
+		return (ret);
+	if (ret == -1)
+		ret = read_file(curr_buff, line);
 	if (ret == -1 || ret == 0)
 		return (ret);
-	ft_putnbr(ret);
-	ft_putstr("\n");
-	while ((pos = ft_strichr(buff, 10)) < 0)
-	{
-		curr_buff->line = line_join_buff(curr_buff->line, buff);
-		ret = get_next_buff(fd, buff);
-		if (ret == -1)
-			return (ret);
-		pos = (ret == 0) ? 0 : pos;
-	}
-	curr_buff->line = line_join_buff(curr_buff->line, ft_strsub(buff, 0, pos));
-	*line = ft_strdup(curr_buff->line);
-	free(curr_buff->line);
-	curr_buff->line = line_sub_buff(buff, pos);
 	return (1);
 }
 
@@ -125,7 +145,7 @@ int		main(int argc, char **argv)
 	int ret;
 	char **line;
 
-	line  = (char **)malloc(sizeof(char*));
+	line  = (char **)malloc(sizeof(char*) * BUFF_SIZE);
 	if (argc == 1)
 		write(2, "File name missing.\n", 19);
 	if (argc >= 2)
@@ -135,12 +155,10 @@ int		main(int argc, char **argv)
 			return (1);
 		while ((ret = get_next_line(fd, line) == 1))
 		{
-			ft_putstr(*line);
-			ft_putstr("\n");
+			//ft_putstr(*line);
+			//ft_putstr("\n");
+			;
 		}
-		get_next_line(fd, line);
-		ft_putstr(*line);
-		ft_putstr("\n");
 		close(fd);
 	}
 	return (0);
