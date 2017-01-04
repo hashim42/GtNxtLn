@@ -1,32 +1,33 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.h                                    :+:      :+:    :+:   */
+/*   ft_lst_elem_by_val.c                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: hazzout <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2016/12/29 17:21:29 by hazzout           #+#    #+#             */
-/*   Updated: 2017/01/04 02:33:08 by hazzout          ###   ########.fr       */
+/*   Created: 2017/01/03 15:45:32 by hazzout           #+#    #+#             */
+/*   Updated: 2017/01/03 17:56:35 by hazzout          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef GET_NEXT_LINE_H
-# define GET_NEXT_LINE_H
+#include "libft.h"
 
-# include <unistd.h>
-# include <fcntl.h>
-# include "./libft/includes/libft.h"
-
-typedef struct		s_fd_buff
+t_list		*ft_lst_elem_by_val(t_list *lst, int (*f)(t_list *elem), int val)
 {
-	char				*line;
-	int					fd;
-}					t_fd_buff;
+	t_list *nxt;
+	t_list *curr;
 
-typedef t_list t_fd_list;
+	nxt = NULL;
+	curr = NULL;
+	if (lst)
+		curr = lst;
+	while (curr)
+	{
+		nxt = curr->next;
+		if (f(curr) == val)
+			return (curr);
+		curr = nxt;
+	}
+	return (NULL);
+}
 
-# define BUFF_SIZE 1 
-
-int		get_next_line(const int fd, char **line);
-
-#endif
