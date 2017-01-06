@@ -38,35 +38,44 @@ t_fd_buff	*get_curr_buff(t_fd_list **fd_list, int fd)
 	return (curr_fd_buff);
 }
 
-int			read_file(t_fd_buff *curr_fd_buff, char **line)
-{	
-	char *buff;
+void str_join_and_free(char **line, char *str)
+{
 	char *tmp;
-	int ret;
-	int pos;
 
+	tmp = *line;
+	*line = ft_strjoin(*line, str);
+	ft_strdel(&tmp);
+}
+
+int			read_from_file(t_fd_buff *curr_fd_buff, char **line)
+{	
+	char	*buff;
+	char	*newline;
+	int		pos;
+	int		ret;
+
+	pos = -1;
 	ret = 1;
 	buff = ft_strnew(BUFF_SIZE);
-	while ((pos = ft_strichr(buff, 10)) == -1 && ret)
+	newline = NULL;
+	while ( pos == -1 && ret)
 	{
 		ret = read(curr_fd_buff->fd, buff, BUFF_SIZE);
-		buff[ret >= 0 ? ret : 0] = '\0';
 		if (ret == -1)
+			return (ret);
+		buff[ret] = '\0';
+		pos = ft_strichr(buff, 10);
+		if (pos >= 0)
 		{
-			ft_strdel(&buff);
-			return (-1);
+			str_join_and_free(line, ft_strsub(buff, 0, pos));
+			newline = ft_strsub(buff, pos + 1, ret - pos);
+			str_join_and_free(&curr_fd_buff->line, newline);
 		}
-		tmp = curr_fd_buff->line;
-		curr_fd_buff->line = ft_strjoin(curr_fd_buff->line, buff);
-		ft_strdel(&tmp);
+		else
+			str_join_and_free(line, buff);
+		pos = (ret == 0 ? 0 : pos);
 	}
-	tmp = curr_fd_buff->line;
-	curr_fd_buff->line = ft_strjoin(curr_fd_buff->line, ft_strsub(buff, 0, pos));
-	*line = ft_strdup(curr_fd_buff->line);
-	ft_strdel(&tmp);
-	curr_fd_buff->line = ft_strsub(buff, pos + 1, ret - pos + 1);
-	ft_strdel(&buff);
-	return (ret == 0 ? 0 : 1);
+	return (ret);
 }
 
 int			read_fd_buff(t_fd_buff *curr_fd_buff, char **line)
@@ -93,13 +102,17 @@ int			get_next_line(const int fd, char **line)
 {
 	static t_fd_list	*fd_list;
 	t_fd_buff			*curr_buff;
-	int					ret;
+	int					retf;
+	int					retb;
 
 	curr_buff = get_curr_buff(&fd_list, fd);
-	ret = read_fd_buff(curr_buff, line);
-	if (ret == 1)
-		return (ret);
-	if (ret == -1)
-		ret = read_file(curr_buff, line);
-	return (ret);
+	retb = read_fd_buff(curr_buff, line);
+	retf = -1;
+	if (retb == 1)
+		return (retb);
+	if (retb == -1)
+		retf = read_from_file(curr_buff, line);
+	if (retf > 0)
+		return (1);
+	return (0);
 }
