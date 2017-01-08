@@ -19,9 +19,17 @@ int     main(int argc, char **argv)
 			return (1);
 		while ((ret = get_next_line(fd, line)) == 1)
 		{
-			ft_putstr(*line);
+			//ft_putchar('\n');
+			//ft_putnbr(ret);
+			//ft_putchar('\n');
+			//ft_putstr(*line);
+			//ft_putchar('\n');
+
 			//;
 		}
+		ft_putchar('\n');
+			ft_putnbr(ret);
+			ft_putchar('\n');
 		 close(fd);
 	}
 }

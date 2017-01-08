@@ -6,7 +6,7 @@
 /*   By: hazzout <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/12/29 17:21:29 by hazzout           #+#    #+#             */
-/*   Updated: 2017/01/04 02:33:08 by hazzout          ###   ########.fr       */
+/*   Updated: 2017/01/06 12:55:00 by hazzout          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,13 +19,15 @@
 
 typedef struct		s_fd_buff
 {
-	char				*line;
+	char				*lines;
 	int					fd;
+	int					filend;
+	int					len;
 }					t_fd_buff;
 
 typedef t_list t_fd_list;
 
-# define BUFF_SIZE 1 
+# define BUFF_SIZE 10
 
 int		get_next_line(const int fd, char **line);
 

@@ -12,6 +12,7 @@
 
 #include "./libft/includes/libft.h"
 #include "get_next_line.h"
+#include <stdio.h>
 
 t_fd_buff	*get_curr_buff(t_fd_list **fd_list, int fd)
 {
@@ -29,90 +30,85 @@ t_fd_buff	*get_curr_buff(t_fd_list **fd_list, int fd)
 	if (curr_fd_buff)
 	{
 		curr_fd_buff->fd = fd;
-		curr_fd_buff->line = ft_strnew(BUFF_SIZE);
-		if (!(curr_fd_buff->line))
+		curr_fd_buff->lines = ft_strnew(BUFF_SIZE);
+		if (!(curr_fd_buff->lines))
 			return (NULL);
+		curr_fd_buff->filend = 0;
+		curr_fd_buff->len = 0;
 		size = sizeof(curr_fd_buff);
 		ft_lstadd(fd_list, ft_lstnew(curr_fd_buff, size));
 	}
 	return (curr_fd_buff);
 }
 
-void str_join_and_free(char **line, char *str)
+int			set_fd_buff_lines(t_fd_buff *curr_fd_buff, char *buff)
 {
-	char *tmp;
+	char	*tmp;
 
-	tmp = *line;
-	*line = ft_strjoin(*line, str);
+	tmp = curr_fd_buff->lines;
+	curr_fd_buff->lines = ft_strjoin(tmp, buff);
 	ft_strdel(&tmp);
+	return (ft_strichr(buff, 10));
 }
 
-int			read_from_file(t_fd_buff *curr_fd_buff, char **line)
+int			read_from_file(t_fd_buff *curr_fd_buff)
 {	
 	char	*buff;
-	char	*newline;
-	int		pos;
 	int		ret;
+	int		pos;
 
+	if (curr_fd_buff->filend == 1)
+		return (0);
 	pos = -1;
-	ret = 1;
 	buff = ft_strnew(BUFF_SIZE);
-	newline = NULL;
-	while ( pos == -1 && ret)
+	while ((ret = read(curr_fd_buff->fd, buff, BUFF_SIZE)) > 0 && pos < 0)
 	{
-		ret = read(curr_fd_buff->fd, buff, BUFF_SIZE);
-		if (ret == -1)
-			return (ret);
+		
 		buff[ret] = '\0';
-		pos = ft_strichr(buff, 10);
-		if (pos >= 0)
-		{
-			str_join_and_free(line, ft_strsub(buff, 0, pos));
-			newline = ft_strsub(buff, pos + 1, ret - pos);
-			str_join_and_free(&curr_fd_buff->line, newline);
-		}
-		else
-			str_join_and_free(line, buff);
-		pos = (ret == 0 ? 0 : pos);
+		pos = set_fd_buff_lines(curr_fd_buff, buff);
 	}
-	return (ret);
+	if (pos >= 0 && ret > 0)
+		set_fd_buff_lines(curr_fd_buff, buff);
+	curr_fd_buff->filend = (ret == 0) ? 1 : 0;
+	curr_fd_buff->len = ft_strlen(curr_fd_buff->lines);
+	return (1);
 }
 
 int			read_fd_buff(t_fd_buff *curr_fd_buff, char **line)
 {
 	int		pos;
-	int		len;
 	char	*tmp;
+	char	*newline;
+	char	*nextline;
 
-	pos = -1;
-	len = 0;
-	if ((pos = ft_strichr(curr_fd_buff->line, 10)) != -1)
-	{
-		*line = ft_strsub(curr_fd_buff->line, 0, pos);
-		tmp = curr_fd_buff->line;
-		len = ft_strlen(tmp);
-		curr_fd_buff->line = ft_strsub(curr_fd_buff->line, pos + 1, len - pos);
-		ft_strdel(&tmp);		
-		return (1);
-	}
-	return (pos);
+	if (ft_strichr(curr_fd_buff->lines, 10) < 0)
+		read_from_file(curr_fd_buff);
+	ft_putstr(curr_fd_buff->lines);
+	tmp = curr_fd_buff->lines;
+	nextline = ft_strchr(curr_fd_buff->lines, 10);
+	if (nextline)
+		curr_fd_buff->lines = nextline + 1;
+	pos = nextline ? nextline - tmp : ft_strlen(curr_fd_buff->lines);
+	newline = ft_strsub(tmp, 0, pos);
+	ft_strdel(&tmp);
+	tmp = *line;
+	*line = newline;
+	ft_strdel(&tmp);
+	return (ft_strlen(*line) ? 1 : 0);
 }
 
 int			get_next_line(const int fd, char **line)
 {
 	static t_fd_list	*fd_list;
-	t_fd_buff			*curr_buff;
-	int					retf;
-	int					retb;
+	t_fd_buff			*curr_fd_buff;
+	int					ret;
 
-	curr_buff = get_curr_buff(&fd_list, fd);
-	retb = read_fd_buff(curr_buff, line);
-	retf = -1;
-	if (retb == 1)
-		return (retb);
-	if (retb == -1)
-		retf = read_from_file(curr_buff, line);
-	if (retf > 0)
-		return (1);
-	return (0);
+	curr_fd_buff = get_curr_buff(&fd_list, fd);
+	if (!curr_fd_buff)
+		return (-1);
+	if ((ret = read_fd_buff(curr_fd_buff, line)) == 1)
+		return (ret);
+	if (ret == 0 && curr_fd_buff->filend == 1)
+		return (0);
+	return (1);
 }
