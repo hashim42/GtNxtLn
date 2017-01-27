@@ -13,56 +13,57 @@
 #include "./libft/includes/libft.h"
 #include "get_next_line.h"
 #include <stdio.h>
+#include <stdio.h>
 
-t_fd_buff	*get_curr_buff(t_list **fd_list, int fd)
+t_fd_buff	*ft_curr_buff(t_list **fd_list, int fd, char m)
 {
-	t_fd_buff 	*curr_fd_buff;
-	t_list	*tmp;
-	t_fd_buff   *curr;
+	t_fd_buff	*curr_fd_buff;
+	t_list		*tmp;
+	t_list		*prev;
 
 	tmp = *fd_list;
 	while (tmp)
 	{
 		curr_fd_buff = (t_fd_buff*)((tmp)->content);
-		if (curr_fd_buff->fd == fd)
+		if (curr_fd_buff->fd == fd && m == 'r')
 			return (curr_fd_buff);
+		if (curr_fd_buff->fd == fd && m == 's')
+			curr_fd_buff->fd = -1;
+		prev = tmp;
 		tmp = tmp->next;
 	}
-	curr_fd_buff = (t_fd_buff*)malloc(sizeof(t_fd_buff));
-	if (curr_fd_buff)
-	{
-		curr_fd_buff->fd = fd;
-		curr_fd_buff->lines = ft_strnew(BUFF_SIZE);
-		if (!(curr_fd_buff->lines))
-			return (NULL);
-		tmp = ft_lstnew(curr_fd_buff, sizeof(curr_fd_buff));
-		curr = (t_fd_buff*)(tmp->content);
-		curr->fd = fd;
-		ft_lstadd(fd_list, tmp);
-		ft_memdel((void **)&curr_fd_buff);
-		curr_fd_buff = (t_fd_buff*)((*fd_list)->content);
-	}
-	return (curr_fd_buff);
+	if (!(curr_fd_buff = (t_fd_buff*)malloc(sizeof(t_fd_buff))) || (m != 'r'))
+		return (NULL);
+	curr_fd_buff->fd = fd;
+	if (!(curr_fd_buff->lines = ft_strnew(0)))
+		return (NULL);
+	tmp = ft_lstnew(curr_fd_buff, sizeof(*curr_fd_buff));
+	ft_lstadd(fd_list, tmp);
+	ft_memdel((void **)&curr_fd_buff);
+	return ((t_fd_buff*)((*fd_list)->content));
 }
 
 int			set_fd_buff_lines(t_fd_buff *curr_fd_buff, char *buff)
 {
 	char	*tmp;
 
-	tmp = curr_fd_buff->lines;
+	tmp = (curr_fd_buff->lines);
 	curr_fd_buff->lines = ft_strjoin(tmp, buff);
-	//ft_strdel(&tmp);
+	ft_strdel(&tmp);
 	return (ft_strichr(buff, 10));
 }
 
 int			read_from_file(t_fd_buff *curr_fd_buff)
-{	
+{
 	char	*buff;
 	int		ret;
 	int		pos;
 
 	if (curr_fd_buff->filend == 1)
+	{
+		curr_fd_buff->lines = ft_strnew(0);
 		return (0);
+	}
 	buff = ft_strnew(BUFF_SIZE);
 	if ((ret = read(curr_fd_buff->fd, buff, BUFF_SIZE)) < 0)
 		return (-1);
@@ -70,7 +71,6 @@ int			read_from_file(t_fd_buff *curr_fd_buff)
 	pos = set_fd_buff_lines(curr_fd_buff, buff);
 	while (ret > 0 && pos < 0)
 	{
-
 		ret = read(curr_fd_buff->fd, buff, BUFF_SIZE);
 		buff[ret] = '\0';
 		pos = set_fd_buff_lines(curr_fd_buff, buff);
@@ -88,32 +88,36 @@ int			read_fd_buff(t_fd_buff *curr_fd_buff, char **line)
 	char	*newline;
 	char	*nextline;
 
-
 	if (ft_strichr(curr_fd_buff->lines, 10) < 0)
-		if(read_from_file(curr_fd_buff) < 0)
+		if (read_from_file(curr_fd_buff) < 0)
 			return (-1);
-	tmp = curr_fd_buff->lines;
+	if (curr_fd_buff->filend == 1 && curr_fd_buff->len == 0)
+		return (0);
 	nextline = ft_strchr(curr_fd_buff->lines, 10);
+	tmp = curr_fd_buff->lines;
 	if (nextline)
-		curr_fd_buff->lines = nextline + 1;
+	{
+		curr_fd_buff->lines = ft_strnew(ft_strlen(nextline + 1));
+		ft_strcpy(curr_fd_buff->lines, nextline + 1);
+		curr_fd_buff->len = ft_strlen(curr_fd_buff->lines);
+	}
 	pos = nextline ? nextline - tmp : ft_strlen(curr_fd_buff->lines);
-	//ft_strdel(&tmp);
 	newline = ft_strsub(tmp, 0, pos);
-	tmp = *line;
-	*line = newline;
 	ft_strdel(&tmp);
+	*line = ft_strnew(ft_strlen(newline));
+	ft_strcpy(*line, newline);
 	return (ft_strlen(*line) ? 1 : 0);
 }
 
 int			get_next_line(const int fd, char **line)
 {
 	static t_list	*fd_list;
-	t_fd_buff			*curr_fd_buff;
-	int					ret;
+	t_fd_buff		*curr_fd_buff;
+	int				ret;
 
-	if (fd < 0)
+	if (!line || fd < 0)
 		return (-1);
-	curr_fd_buff = get_curr_buff(&fd_list, fd);
+	curr_fd_buff = ft_curr_buff(&fd_list, fd, 'r');
 	if (!curr_fd_buff)
 		return (-1);
 	if ((ret = read_fd_buff(curr_fd_buff, line)) == 1)
@@ -121,8 +125,9 @@ int			get_next_line(const int fd, char **line)
 	if (ret < 0)
 		return (ret);
 	if (ret == 0 && curr_fd_buff->filend == 1)
+	{
+		ft_curr_buff(&fd_list, fd, 's');
 		return (0);
+	}
 	return (1);
 }
-
-
